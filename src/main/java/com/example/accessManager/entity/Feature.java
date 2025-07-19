@@ -21,8 +21,8 @@ public class Feature {
     @Column(name = "name")
     private String name;
 
-    @Column(name = "is_active", columnDefinition = "BOOLEAN DEFAULT true")
-    private Boolean isActive;
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive;
 
 
 }

@@ -12,7 +12,6 @@ public class UserDTO {
     private String name;
     private String email;
     private String role;
-    private String team;
     private Long teamId;
-    private Boolean isActive;
+    private boolean isActive;
 }
