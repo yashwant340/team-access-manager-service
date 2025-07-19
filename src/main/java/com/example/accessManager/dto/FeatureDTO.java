@@ -10,5 +10,5 @@ import lombok.*;
 public class FeatureDTO {
     private Long id;
     private String name;
-    private Boolean isActive;
+    private boolean isActive;
 }

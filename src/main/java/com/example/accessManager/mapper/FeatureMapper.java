@@ -10,6 +10,7 @@ public class FeatureMapper {
     public Feature newTFeatureDetailsWrapperToFeature(NewFeatureDetailsWrapper wrapper){
         return Feature.builder()
                 .name(wrapper.getName())
+                .isActive(true)
                 .build();
     }
 
@@ -17,7 +18,7 @@ public class FeatureMapper {
         return FeatureDTO.builder()
                 .id(feature.getId())
                 .name(feature.getName())
-                .isActive(feature.getIsActive())
+                .isActive(feature.isActive())
                 .build();
     }
 }

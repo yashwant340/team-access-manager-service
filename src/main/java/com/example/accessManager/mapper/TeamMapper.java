@@ -10,6 +10,7 @@ public class TeamMapper {
     public Team newTeamDetailsWrapperToTeam(NewTeamDetailsWrapper wrapper){
         return Team.builder()
                 .name(wrapper.getName())
+                .isActive(true)
                 .build();
     }
 
@@ -17,7 +18,7 @@ public class TeamMapper {
         return TeamDTO.builder()
                 .id(team.getId())
                 .name(team.getName())
-                .isActive(team.getIsActive())
+                .isActive(team.isActive())
                 .build();
     }
 }

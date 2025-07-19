@@ -14,16 +14,18 @@ public class UserMapper {
                 .name(wrapper.getName())
                 .role(wrapper.getRole())
                 .team(Team.builder().id(wrapper.getTeamId()).build())
+                .isActive(true)
                 .build();
     }
 
     public UserDTO userToUserDto(User user){
         return UserDTO.builder()
                 .id(user.getId())
+                .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .teamId(user.getTeam().getId())
-                .isActive(user.getIsActive())
+                .isActive(user.isActive())
                 .build();
     }
 }

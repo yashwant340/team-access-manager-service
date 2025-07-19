@@ -27,6 +27,6 @@ public class TeamAccessControl {
     @JoinColumn(name = "feature_id", referencedColumnName = "id")
     private Feature feature;
 
-    @Column(name = "has_access", columnDefinition = "BOOLEAN DEFAULT false")
-    private Boolean hasAccess;
+    @Column(name = "has_access", nullable = false)
+    private boolean hasAccess;
 }

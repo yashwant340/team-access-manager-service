@@ -29,6 +29,6 @@ public class User {
     @JoinColumn(name = "team_id", referencedColumnName = "id")
     private Team team;
 
-    @Column(name = "is_active", columnDefinition = "BOOLEAN DEFAULT true")
-    private Boolean isActive;
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive;
 }
