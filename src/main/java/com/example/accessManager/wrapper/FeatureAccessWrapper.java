@@ -9,9 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class NewUserDetailsWrapper {
-    private String name;
-    private Long teamId;
-    private String email;
-    private String role;
+public class FeatureAccessWrapper {
+    private Long featureId;
+    private boolean access;
 }

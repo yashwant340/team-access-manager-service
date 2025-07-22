@@ -18,7 +18,7 @@ public class FeatureMapper {
         return FeatureDTO.builder()
                 .id(feature.getId())
                 .name(feature.getName())
-                .isActive(feature.isActive())
+                .isActive(feature.getIsActive())
                 .build();
     }
 }
