@@ -1,10 +1,13 @@
 package com.example.accessManager.entity;
 
+import com.example.accessManager.enums.AccessMode;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.Date;
 
 @Entity
 @Table(name = "users")
@@ -30,5 +33,12 @@ public class User {
     private Team team;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive;
+    private Boolean isActive;
+
+    @Column(name = "access_mode")
+    @Enumerated(EnumType.STRING)
+    private AccessMode accessMode;
+
+    @Column(name = "created_date")
+    private Date createdDate;
 }

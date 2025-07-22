@@ -22,7 +22,7 @@ public class Feature {
     private String name;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive;
+    private Boolean isActive;
 
 
 }

@@ -7,13 +7,11 @@ import lombok.*;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserDTO {
+public class TeamAccessControlDTO {
     private Long id;
-    private String name;
-    private String email;
-    private String role;
     private Long teamId;
     private String teamName;
-    private String accessMode;
-    private boolean isActive;
+    private Long featureId;
+    private String featureName;
+    private boolean hasAccess;
 }

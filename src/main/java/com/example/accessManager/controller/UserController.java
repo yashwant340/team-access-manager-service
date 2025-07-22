@@ -1,8 +1,11 @@
 package com.example.accessManager.controller;
 
+import com.example.accessManager.dto.AccessControlDTO;
 import com.example.accessManager.dto.UserDTO;
+import com.example.accessManager.exceptions.NotFoundException;
 import com.example.accessManager.service.UserService;
-import com.example.accessManager.wrapper.NewUserDetailsWrapper;
+import com.example.accessManager.wrapper.UserAccessModeDetailsWrapper;
+import com.example.accessManager.wrapper.UserDetailsWrapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +24,22 @@ public class UserController {
     }
 
     @PostMapping("/addNew")
-    public UserDTO addNewUser(@RequestBody NewUserDetailsWrapper wrapper){
+    public UserDTO addNewUser(@RequestBody UserDetailsWrapper wrapper){
         return userService.addNewUser(wrapper);
+    }
+
+    @PostMapping("/updateUser")
+    public UserDTO updateUser(@RequestBody UserDetailsWrapper wrapper){
+        return userService.updateUser(wrapper);
+    }
+
+    @PostMapping("/updateAccessMode")
+    public void updateAccessMode(@RequestBody UserAccessModeDetailsWrapper wrapper) throws NotFoundException {
+        userService.updateAccessMode(wrapper);
+    }
+
+    @GetMapping("/user-permissions")
+    public AccessControlDTO getUserPermissions(@RequestParam("userId") Long id) throws NotFoundException {
+        return userService.getUserPermissions(id);
     }
 }

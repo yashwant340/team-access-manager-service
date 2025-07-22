@@ -9,21 +9,21 @@ import lombok.NoArgsConstructor;
 import java.util.Date;
 
 @Entity
-@Table(name = "team_access_control", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"team_id", "feature_id"})
+@Table(name = "user_access_control", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"user_id", "feature_id"})
 })
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class TeamAccessControl {
+public class UserAccessControl {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "team_id", referencedColumnName = "id")
-    private Team team;
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    private User user;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "feature_id", referencedColumnName = "id")
@@ -35,6 +35,7 @@ public class TeamAccessControl {
     @Column(name = "created_date")
     private Date createdDate;
 
-    @Column(name = "updated_date")
-    private Date updatedDate;
+    @Column(name = "is_active")
+    private Boolean isActive;
+
 }

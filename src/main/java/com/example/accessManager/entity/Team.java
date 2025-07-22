@@ -6,6 +6,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 @Entity
 @Table(name = "team")
 @Data
@@ -20,7 +24,12 @@ public class Team {
     @Column(name = "name")
     private String name;
 
-
     @Column(name = "is_active", nullable = false)
-    private boolean isActive;
+    private Boolean isActive;
+
+    @OneToMany(mappedBy = "team", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<TeamAccessControl> accessControls = new ArrayList<>();
+
+    @Column(name = "created_date")
+    private Date createdDate;
 }

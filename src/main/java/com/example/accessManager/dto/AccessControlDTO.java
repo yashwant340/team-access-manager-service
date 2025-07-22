@@ -9,8 +9,8 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class TeamDTO {
-    private Long id;
-    private String name;
-    private boolean isActive;
+public class AccessControlDTO {
+    List<TeamAccessControlDTO> teamAccessControlDTOS;
+    List<UserAccessControlDTO> userAccessControlDTOS;
+
 }
