@@ -2,17 +2,24 @@ package com.example.accessManager.mapper;
 
 import com.example.accessManager.dto.TeamAccessControlDTO;
 import com.example.accessManager.dto.TeamDTO;
+import com.example.accessManager.dto.UserDTO;
 import com.example.accessManager.entity.Feature;
 import com.example.accessManager.entity.Team;
 import com.example.accessManager.entity.TeamAccessControl;
 import com.example.accessManager.wrapper.NewTeamDetailsWrapper;
 import com.example.accessManager.wrapper.UpdateTeamAccessWrapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class TeamMapper {
+    private final UserMapper userMapper;
+
     public Team newTeamDetailsWrapperToTeam(NewTeamDetailsWrapper wrapper){
         return Team.builder()
                 .name(wrapper.getName())
@@ -23,10 +30,14 @@ public class TeamMapper {
 
     public TeamDTO teamToTeamDto(Team team){
 
+        List<UserDTO> userDTOList = new ArrayList<>();
+        team.getUsers().forEach(x -> userDTOList.add(userMapper.userToUserDto(x)));
+
         return TeamDTO.builder()
                 .id(team.getId())
                 .name(team.getName())
                 .isActive(team.getIsActive())
+                .userList(userDTOList)
                 .build();
     }
 
