@@ -13,4 +13,5 @@ public class TeamDTO {
     private Long id;
     private String name;
     private boolean isActive;
+    private List<UserDTO> userList;
 }

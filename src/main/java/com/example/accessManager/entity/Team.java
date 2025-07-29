@@ -30,6 +30,9 @@ public class Team {
     @OneToMany(mappedBy = "team", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<TeamAccessControl> accessControls = new ArrayList<>();
 
+    @OneToMany(mappedBy = "team", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<User> users = new ArrayList<>();
+
     @Column(name = "created_date")
     private Date createdDate;
 }
