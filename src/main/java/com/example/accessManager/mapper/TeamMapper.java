@@ -31,7 +31,9 @@ public class TeamMapper {
     public TeamDTO teamToTeamDto(Team team){
 
         List<UserDTO> userDTOList = new ArrayList<>();
-        team.getUsers().forEach(x -> userDTOList.add(userMapper.userToUserDto(x)));
+        if(team.getUsers() != null){
+            team.getUsers().forEach(x -> userDTOList.add(userMapper.userToUserDto(x)));
+        }
 
         return TeamDTO.builder()
                 .id(team.getId())

@@ -43,6 +43,9 @@ public class TeamServiceImpl implements TeamService {
     @Override
     public TeamDTO addNewteam(NewTeamDetailsWrapper wrapper) {
         Team team = teamRepository.save(teamMapper.newTeamDetailsWrapperToTeam(wrapper));
+        List<UpdateTeamAccessWrapper> updateTeamAccessWrapperList = new ArrayList<>();
+        wrapper.getAccessList().forEach(x -> updateTeamAccessWrapperList.add(UpdateTeamAccessWrapper.builder().id(0L).teamId(team.getId()).featureId(x.getFeatureId()).hasAccess(x.isHasAccess()).build()));
+        updateTeamAccess(updateTeamAccessWrapperList);
         auditTrailService.addAuditEntry(ActionType.ADD_TEAM,"New Team Added","", EntityType.TEAM,team.getId());
         return teamMapper.teamToTeamDto(team);
     }
