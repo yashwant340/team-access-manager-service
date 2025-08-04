@@ -1,9 +1,6 @@
 package com.example.accessManager.service;
 
-import com.example.accessManager.dto.AccessControlDTO;
-import com.example.accessManager.dto.TeamAccessControlDTO;
-import com.example.accessManager.dto.TeamDTO;
-import com.example.accessManager.dto.UserDTO;
+import com.example.accessManager.dto.*;
 import com.example.accessManager.exceptions.NotFoundException;
 import com.example.accessManager.wrapper.NewTeamDetailsWrapper;
 import com.example.accessManager.wrapper.UpdateTeamAccessWrapper;
@@ -22,4 +19,8 @@ public interface TeamService {
 
 
     AccessControlDTO getTeamPermissions(Long id) throws NotFoundException;
+
+    void deleteTeam(Long id) throws NotFoundException;
+
+    List<AuditDTO> getAuditLogs(Long id) throws NotFoundException;
 }

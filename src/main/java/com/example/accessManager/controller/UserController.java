@@ -1,6 +1,7 @@
 package com.example.accessManager.controller;
 
 import com.example.accessManager.dto.AccessControlDTO;
+import com.example.accessManager.dto.AuditDTO;
 import com.example.accessManager.dto.UserDTO;
 import com.example.accessManager.exceptions.NotFoundException;
 import com.example.accessManager.service.UserService;
@@ -41,5 +42,10 @@ public class UserController {
     @GetMapping("/user-permissions")
     public AccessControlDTO getUserPermissions(@RequestParam("userId") Long id) throws NotFoundException {
         return userService.getUserPermissions(id);
+    }
+
+    @GetMapping("/userAuditLog")
+    public List<AuditDTO> getAuditLogs(@RequestParam("userId") Long id) throws NotFoundException {
+        return userService.getAuditLogs(id);
     }
 }

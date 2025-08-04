@@ -1,6 +1,7 @@
 package com.example.accessManager.controller;
 
 import com.example.accessManager.dto.AccessControlDTO;
+import com.example.accessManager.dto.AuditDTO;
 import com.example.accessManager.dto.TeamAccessControlDTO;
 import com.example.accessManager.dto.TeamDTO;
 import com.example.accessManager.exceptions.NotFoundException;
@@ -27,6 +28,16 @@ public class TeamController {
     @PostMapping("/addNew")
     public TeamDTO addNewTeam(@RequestBody NewTeamDetailsWrapper wrapper){
         return teamService.addNewteam(wrapper);
+    }
+
+    @GetMapping("/auditLog")
+    public List<AuditDTO> getAuditLogs(@RequestParam("teamId") Long id) throws NotFoundException {
+        return teamService.getAuditLogs(id);
+    }
+
+    @PostMapping("/delete")
+    public void deleteTeam(@RequestParam("teamId") Long id) throws NotFoundException {
+        teamService.deleteTeam(id);
     }
 
     @PostMapping("/updateAccess")

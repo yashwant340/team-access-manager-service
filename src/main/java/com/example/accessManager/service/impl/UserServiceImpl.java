@@ -1,9 +1,6 @@
 package com.example.accessManager.service.impl;
 
-import com.example.accessManager.dto.AccessControlDTO;
-import com.example.accessManager.dto.TeamAccessControlDTO;
-import com.example.accessManager.dto.UserAccessControlDTO;
-import com.example.accessManager.dto.UserDTO;
+import com.example.accessManager.dto.*;
 import com.example.accessManager.entity.*;
 import com.example.accessManager.enums.AccessMode;
 import com.example.accessManager.enums.ActionType;
@@ -50,14 +47,13 @@ public class UserServiceImpl implements UserService {
     public AccessControlDTO getUserPermissions(Long id) throws NotFoundException {
         User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found with ID : {}" + id));
         AccessControlDTO accessControlDTO = new AccessControlDTO();
-        if(user.getAccessMode().equals(AccessMode.INHERIT_TEAM_ACCESS)){
             List<TeamAccessControl> teamAccessControls = user.getTeam().getAccessControls();
             List<TeamAccessControlDTO> teamAccessControlDTOS = new ArrayList<>();
             for(TeamAccessControl accessControl: teamAccessControls){
                 teamAccessControlDTOS.add(teamMapper.accessControlToDTO(accessControl));
             }
             accessControlDTO.setTeamAccessControlDTOS(teamAccessControlDTOS);
-        }else{
+        if(!user.getAccessMode().equals(AccessMode.INHERIT_TEAM_ACCESS)){
             List<UserAccessControl> userAccessControls = userAccessControlRepository.findAllByUser_IdInAndIsActiveTrue(List.of(user.getId()));
             List<UserAccessControlDTO> userAccessControlDTOS = new ArrayList<>();
             for(UserAccessControl accessControl: userAccessControls){
@@ -102,15 +98,32 @@ public class UserServiceImpl implements UserService {
             user.setAccessMode(AccessMode.OVERRIDE_TEAM_ACCESS);
             List<UserAccessControl> userAccessControlList = new ArrayList<>();
             for(FeatureAccessWrapper overrides: wrapper.getFeatureAccessDetailsWrapper().getFeatureAccessWrapperList()){
-                UserAccessControl userAccessControl = UserAccessControl.builder()
-                        .user(User.builder().id(wrapper.getUserId()).build())
-                        .feature(Feature.builder().id(overrides.getFeatureId()).build())
-                        .hasAccess(overrides.isAccess())
-                        .createdDate(new Date())
-                        .isActive(true)
-                        .build();
+                Long userId = wrapper.getUserId();
+                Long featureId = overrides.getFeatureId();
 
-                userAccessControlList.add(userAccessControl);
+                // Check if entry exists
+                Optional<UserAccessControl> existing = userAccessControlRepository
+                        .findByUser_IdAndFeature_Id(userId, featureId);
+
+                if (existing.isPresent()) {
+                    // Update existing entry
+                    UserAccessControl control = existing.get();
+                    control.setHasAccess(overrides.isAccess());
+                    control.setUpdatedDate(new Date());
+                    control.setIsActive(true);
+                    userAccessControlList.add(control);
+                } else {
+                    // Insert new entry
+                    UserAccessControl newControl = UserAccessControl.builder()
+                            .user(User.builder().id(userId).build())
+                            .feature(Feature.builder().id(featureId).build())
+                            .hasAccess(overrides.isAccess())
+                            .createdDate(new Date())
+                            .updatedDate(new Date())
+                            .isActive(true)
+                            .build();
+                    userAccessControlList.add(newControl);
+                }
             }
             List<UserAccessControl> userAccessControl = userAccessControlRepository.saveAll(userAccessControlList);
             for(UserAccessControl overrides : userAccessControl){
@@ -123,6 +136,7 @@ public class UserServiceImpl implements UserService {
             if(!userAccessControlList.isEmpty()){
                 for(UserAccessControl access: userAccessControlList){
                     access.setIsActive(Boolean.FALSE);
+                    access.setUpdatedDate(new Date());
                     auditTrailService.addAuditEntry(ActionType.USER_ACCESS_CHANGE,"Access revoked","",EntityType.USER_ACCESS, access.getId());
                 }
 
@@ -131,5 +145,10 @@ public class UserServiceImpl implements UserService {
         }
 
         userRepository.save(user);
+    }
+
+    @Override
+    public List<AuditDTO> getAuditLogs(Long id) throws NotFoundException {
+        return auditTrailService.getAuditLogs(id, "User");
     }
 }
