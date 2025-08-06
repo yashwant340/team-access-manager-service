@@ -23,4 +23,6 @@ public interface UserService {
     void updateAccessMode(UserAccessModeDetailsWrapper wrapper) throws NotFoundException;
 
     List<AuditDTO> getAuditLogs(Long id) throws NotFoundException;
+
+    UserDTO deleteUser(Long id) throws NotFoundException;
 }

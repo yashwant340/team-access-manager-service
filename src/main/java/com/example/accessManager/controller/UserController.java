@@ -34,6 +34,11 @@ public class UserController {
         return userService.updateUser(wrapper);
     }
 
+    @PostMapping("/deleteUser")
+    public UserDTO deleteUser(@RequestParam("userId") Long id) throws NotFoundException {
+        return userService.deleteUser(id);
+    }
+
     @PostMapping("/updateAccessMode")
     public void updateAccessMode(@RequestBody UserAccessModeDetailsWrapper wrapper) throws NotFoundException {
         userService.updateAccessMode(wrapper);

@@ -17,6 +17,7 @@ import com.example.accessManager.wrapper.FeatureAccessWrapper;
 import com.example.accessManager.wrapper.UserAccessModeDetailsWrapper;
 import com.example.accessManager.wrapper.UserDetailsWrapper;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.annotations.NotFound;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -77,12 +78,22 @@ public class UserServiceImpl implements UserService {
         UserDTO userDTO = new UserDTO();
         if(user.isPresent()){
             User currUser = user.get();
-            currUser.setRole(wrapper.getRole());
-            currUser.setEmail(wrapper.getEmail());
-            currUser.setTeam(Team.builder().id(wrapper.getTeamId()).build());
-            currUser.setIsActive(wrapper.isActive());
+            if(wrapper.getRole() != null && !wrapper.getRole().trim().equals(currUser.getRole().trim())) {
+                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User role updated from " +user.get().getRole() + " to " + wrapper.getRole(),"",EntityType.USER, wrapper.getId());
+                currUser.setRole(wrapper.getRole());
+            }
+            if(wrapper.getEmail() != null && !wrapper.getEmail().equals(currUser.getEmail())) {
+                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User email updated from " +user.get().getEmail() + " to " + wrapper.getEmail(),"",EntityType.USER, wrapper.getId());
+                currUser.setEmail(wrapper.getEmail());
+            }
+            if(wrapper.getTeamId() != null && !wrapper.getTeamId().equals(currUser.getTeam().getId())) {
+                String name = currUser.getTeam().getName();
+                currUser.setTeam(Team.builder().id(wrapper.getTeamId()).build());
+                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User team updated from " + name + " to " + wrapper.getTeamName(),"",EntityType.USER, wrapper.getId());
+            }
             userDTO = userMapper.userToUserDto(userRepository.save(currUser));
         }
+
         return userDTO;
     }
 
@@ -150,5 +161,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<AuditDTO> getAuditLogs(Long id) throws NotFoundException {
         return auditTrailService.getAuditLogs(id, "User");
+    }
+
+    @Override
+    public UserDTO deleteUser(Long id) throws NotFoundException {
+        User user = userRepository.findById(id).orElseThrow( () -> new NotFoundException("User not found with " + id));
+        user.setIsActive(false);
+        UserDTO userDTO = userMapper.userToUserDto(userRepository.save(user));
+        auditTrailService.addAuditEntry(ActionType.UPDATE_USER, "User Deleted", "",EntityType.USER,id);
+        return userDTO;
     }
 }

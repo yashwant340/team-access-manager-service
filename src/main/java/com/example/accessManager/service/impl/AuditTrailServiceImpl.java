@@ -64,7 +64,11 @@ public class AuditTrailServiceImpl implements AuditTrailService {
             auditDTO.setActor(auditTrail.getActor());
             auditDTO.setDate(String.valueOf(auditTrail.getUpdatedDate()));
             switch (auditTrail.getActionType()){
-                case ActionType.ADD_TEAM, ActionType.UPDATE_TEAM, ActionType.ACCESS_MODE_CHANGE, ActionType.ADD_USER:
+                case ADD_TEAM:
+                case UPDATE_TEAM:
+                case ACCESS_MODE_CHANGE:
+                case ADD_USER:
+                case UPDATE_USER:
                     auditDTO.setAuditDescription(auditTrail.getAction());
                     break;
                 case ActionType.TEAM_ACCESS_CHANGE:
