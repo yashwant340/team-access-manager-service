@@ -38,7 +38,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDTO> getAllUsers() {
-        List<User> userList = userRepository.findAllByIsActiveTrue();
+        List<User> userList = userRepository.findAll();
         List<UserDTO> userDTOList = new ArrayList<>();
         userList.forEach( x -> userDTOList.add(userMapper.userToUserDto(x)));
         return userDTOList;

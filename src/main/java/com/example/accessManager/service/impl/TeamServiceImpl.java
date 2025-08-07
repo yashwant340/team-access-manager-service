@@ -38,7 +38,7 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     public List<TeamDTO> getAllTeams() {
-        List<Team> teamList = teamRepository.findAllByIsActiveTrue();
+        List<Team> teamList = teamRepository.findAll();
         List<TeamDTO> teamDTOList = new ArrayList<>();
         teamList.forEach(x -> teamDTOList.add(teamMapper.teamToTeamDto(x)));
         return teamDTOList;
@@ -129,8 +129,9 @@ public class TeamServiceImpl implements TeamService {
                             throw new RuntimeException(e);
                         }
                     }
-                }
 
+                }
+                auditTrailService.addAuditEntry(ActionType.ACCESS_MODE_CHANGE,"Access Mode is changed to \"Override team access\" and all feature's access has been set to false because of team inactivation","",EntityType.USER,x.getId());
             });
             userRepository.saveAll(usersList);
 
