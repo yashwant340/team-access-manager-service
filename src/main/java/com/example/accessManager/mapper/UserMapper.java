@@ -18,6 +18,7 @@ public class UserMapper {
                 .email(wrapper.getEmail())
                 .name(wrapper.getName())
                 .role(wrapper.getRole())
+                .empId(Long.valueOf(wrapper.getEmpId()))
                 .team(Team.builder().id(wrapper.getTeamId()).build())
                 .createdDate(new Date())
                 .accessMode(wrapper.isInheritTeamAccess() ? AccessMode.INHERIT_TEAM_ACCESS : AccessMode.OVERRIDE_TEAM_ACCESS)
@@ -28,6 +29,7 @@ public class UserMapper {
     public UserDTO userToUserDto(User user){
         return UserDTO.builder()
                 .id(user.getId())
+                .empId(String.valueOf(user.getEmpId()))
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())

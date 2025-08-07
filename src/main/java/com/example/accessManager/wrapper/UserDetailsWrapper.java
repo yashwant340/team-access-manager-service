@@ -13,6 +13,8 @@ public class UserDetailsWrapper {
     private Long id;
     private String name;
     private Long teamId;
+    private String teamName;
+    private String empId;
     private String email;
     private String role;
     private boolean active;

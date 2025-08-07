@@ -1,9 +1,6 @@
 package com.example.accessManager.service.impl;
 
-import com.example.accessManager.dto.AccessControlDTO;
-import com.example.accessManager.dto.TeamAccessControlDTO;
-import com.example.accessManager.dto.UserAccessControlDTO;
-import com.example.accessManager.dto.UserDTO;
+import com.example.accessManager.dto.*;
 import com.example.accessManager.entity.*;
 import com.example.accessManager.enums.AccessMode;
 import com.example.accessManager.enums.ActionType;
@@ -40,7 +37,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDTO> getAllUsers() {
-        List<User> userList = userRepository.findAllByIsActiveTrue();
+        List<User> userList = userRepository.findAll();
         List<UserDTO> userDTOList = new ArrayList<>();
         userList.forEach( x -> userDTOList.add(userMapper.userToUserDto(x)));
         return userDTOList;
@@ -50,14 +47,13 @@ public class UserServiceImpl implements UserService {
     public AccessControlDTO getUserPermissions(Long id) throws NotFoundException {
         User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found with ID : {}" + id));
         AccessControlDTO accessControlDTO = new AccessControlDTO();
-        if(user.getAccessMode().equals(AccessMode.INHERIT_TEAM_ACCESS)){
             List<TeamAccessControl> teamAccessControls = user.getTeam().getAccessControls();
             List<TeamAccessControlDTO> teamAccessControlDTOS = new ArrayList<>();
             for(TeamAccessControl accessControl: teamAccessControls){
                 teamAccessControlDTOS.add(teamMapper.accessControlToDTO(accessControl));
             }
             accessControlDTO.setTeamAccessControlDTOS(teamAccessControlDTOS);
-        }else{
+        if(!user.getAccessMode().equals(AccessMode.INHERIT_TEAM_ACCESS)){
             List<UserAccessControl> userAccessControls = userAccessControlRepository.findAllByUser_IdInAndIsActiveTrue(List.of(user.getId()));
             List<UserAccessControlDTO> userAccessControlDTOS = new ArrayList<>();
             for(UserAccessControl accessControl: userAccessControls){
@@ -81,12 +77,22 @@ public class UserServiceImpl implements UserService {
         UserDTO userDTO = new UserDTO();
         if(user.isPresent()){
             User currUser = user.get();
-            currUser.setRole(wrapper.getRole());
-            currUser.setEmail(wrapper.getEmail());
-            currUser.setTeam(Team.builder().id(wrapper.getTeamId()).build());
-            currUser.setIsActive(wrapper.isActive());
+            if(wrapper.getRole() != null && !wrapper.getRole().trim().equals(currUser.getRole().trim())) {
+                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User role updated from " +user.get().getRole() + " to " + wrapper.getRole(),"",EntityType.USER, wrapper.getId());
+                currUser.setRole(wrapper.getRole());
+            }
+            if(wrapper.getEmail() != null && !wrapper.getEmail().equals(currUser.getEmail())) {
+                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User email updated from " +user.get().getEmail() + " to " + wrapper.getEmail(),"",EntityType.USER, wrapper.getId());
+                currUser.setEmail(wrapper.getEmail());
+            }
+            if(wrapper.getTeamId() != null && !wrapper.getTeamId().equals(currUser.getTeam().getId())) {
+                String name = currUser.getTeam().getName();
+                currUser.setTeam(Team.builder().id(wrapper.getTeamId()).build());
+                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User team updated from " + name + " to " + wrapper.getTeamName(),"",EntityType.USER, wrapper.getId());
+            }
             userDTO = userMapper.userToUserDto(userRepository.save(currUser));
         }
+
         return userDTO;
     }
 
@@ -102,15 +108,32 @@ public class UserServiceImpl implements UserService {
             user.setAccessMode(AccessMode.OVERRIDE_TEAM_ACCESS);
             List<UserAccessControl> userAccessControlList = new ArrayList<>();
             for(FeatureAccessWrapper overrides: wrapper.getFeatureAccessDetailsWrapper().getFeatureAccessWrapperList()){
-                UserAccessControl userAccessControl = UserAccessControl.builder()
-                        .user(User.builder().id(wrapper.getUserId()).build())
-                        .feature(Feature.builder().id(overrides.getFeatureId()).build())
-                        .hasAccess(overrides.isAccess())
-                        .createdDate(new Date())
-                        .isActive(true)
-                        .build();
+                Long userId = wrapper.getUserId();
+                Long featureId = overrides.getFeatureId();
 
-                userAccessControlList.add(userAccessControl);
+                // Check if entry exists
+                Optional<UserAccessControl> existing = userAccessControlRepository
+                        .findByUser_IdAndFeature_Id(userId, featureId);
+
+                if (existing.isPresent()) {
+                    // Update existing entry
+                    UserAccessControl control = existing.get();
+                    control.setHasAccess(overrides.isAccess());
+                    control.setUpdatedDate(new Date());
+                    control.setIsActive(true);
+                    userAccessControlList.add(control);
+                } else {
+                    // Insert new entry
+                    UserAccessControl newControl = UserAccessControl.builder()
+                            .user(User.builder().id(userId).build())
+                            .feature(Feature.builder().id(featureId).build())
+                            .hasAccess(overrides.isAccess())
+                            .createdDate(new Date())
+                            .updatedDate(new Date())
+                            .isActive(true)
+                            .build();
+                    userAccessControlList.add(newControl);
+                }
             }
             List<UserAccessControl> userAccessControl = userAccessControlRepository.saveAll(userAccessControlList);
             for(UserAccessControl overrides : userAccessControl){
@@ -123,6 +146,7 @@ public class UserServiceImpl implements UserService {
             if(!userAccessControlList.isEmpty()){
                 for(UserAccessControl access: userAccessControlList){
                     access.setIsActive(Boolean.FALSE);
+                    access.setUpdatedDate(new Date());
                     auditTrailService.addAuditEntry(ActionType.USER_ACCESS_CHANGE,"Access revoked","",EntityType.USER_ACCESS, access.getId());
                 }
 
@@ -131,5 +155,19 @@ public class UserServiceImpl implements UserService {
         }
 
         userRepository.save(user);
+    }
+
+    @Override
+    public List<AuditDTO> getAuditLogs(Long id) throws NotFoundException {
+        return auditTrailService.getAuditLogs(id, "User");
+    }
+
+    @Override
+    public UserDTO deleteUser(Long id) throws NotFoundException {
+        User user = userRepository.findById(id).orElseThrow( () -> new NotFoundException("User not found with " + id));
+        user.setIsActive(false);
+        UserDTO userDTO = userMapper.userToUserDto(userRepository.save(user));
+        auditTrailService.addAuditEntry(ActionType.UPDATE_USER, "User Deleted", "",EntityType.USER,id);
+        return userDTO;
     }
 }
