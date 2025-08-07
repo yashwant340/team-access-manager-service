@@ -2,6 +2,10 @@ package com.example.accessManager.controller;
 
 import com.example.accessManager.dto.AuthRequest;
 import com.example.accessManager.dto.AuthResponse;
+import com.example.accessManager.dto.LoginUserDTO;
+import com.example.accessManager.entity.User;
+import com.example.accessManager.mapper.UserMapper;
+import com.example.accessManager.repository.UserRepository;
 import com.example.accessManager.utils.JwtUtility;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -10,11 +14,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,6 +27,8 @@ public class AuthController {
 
     private final AuthenticationManager authManager;
     private final JwtUtility jwtUtil;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest authRequest) {
@@ -44,6 +50,16 @@ public class AuthController {
                     .body("Login failed: " + ex.getMessage());
         }
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<LoginUserDTO> getMe(@AuthenticationPrincipal UserDetails userDetails) {
+        String username = userDetails.getUsername();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        return ResponseEntity.ok(userMapper.userToLoginUserDto(user));
+    }
+
 
 }
 

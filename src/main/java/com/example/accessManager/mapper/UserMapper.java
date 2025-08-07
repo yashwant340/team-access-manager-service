@@ -1,5 +1,6 @@
 package com.example.accessManager.mapper;
 
+import com.example.accessManager.dto.LoginUserDTO;
 import com.example.accessManager.dto.UserAccessControlDTO;
 import com.example.accessManager.dto.UserDTO;
 import com.example.accessManager.entity.Team;
@@ -48,6 +49,17 @@ public class UserMapper {
                 .featureName(userAccessControl.getFeature().getName())
                 .userName(userAccessControl.getUser().getName())
                 .hasAccess(userAccessControl.isHasAccess())
+                .build();
+    }
+
+    public LoginUserDTO userToLoginUserDto(User user) {
+        return LoginUserDTO.builder()
+                .username(user.getUsername())
+                .platformRole(user.getPlatformRole())
+                .email(user.getEmail())
+                .name(user.getName())
+                .id(user.getId())
+                .teamId(user.getTeam().getId())
                 .build();
     }
 }

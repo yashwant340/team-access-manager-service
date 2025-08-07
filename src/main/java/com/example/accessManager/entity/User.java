@@ -30,6 +30,9 @@ public class User {
     @Column(name = "name")
     private String name;
 
+    @Column(name = "platform_role")
+    private String platformRole;
+
     private String email;
 
     private String role;
