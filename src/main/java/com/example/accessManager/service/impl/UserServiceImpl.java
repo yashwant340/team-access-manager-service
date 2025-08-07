@@ -17,7 +17,6 @@ import com.example.accessManager.wrapper.FeatureAccessWrapper;
 import com.example.accessManager.wrapper.UserAccessModeDetailsWrapper;
 import com.example.accessManager.wrapper.UserDetailsWrapper;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.annotations.NotFound;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
