@@ -1,8 +1,6 @@
 package com.example.accessManager.controller;
 
-import com.example.accessManager.dto.AccessControlDTO;
-import com.example.accessManager.dto.AuditDTO;
-import com.example.accessManager.dto.UserDTO;
+import com.example.accessManager.dto.*;
 import com.example.accessManager.exceptions.NotFoundException;
 import com.example.accessManager.service.UserService;
 import com.example.accessManager.wrapper.UserAccessModeDetailsWrapper;
@@ -24,6 +22,16 @@ public class UserController {
         return userService.getAllUsers();
     }
 
+    @GetMapping("/getUser")
+    public UserDTO getUser(@RequestParam("userId") Long id) throws NotFoundException {
+        return userService.getUser(id);
+    }
+
+    @GetMapping("/teamId/")
+    public List<UserDTO> getUsersOfTeam(@RequestParam("teamId") Long id){
+        return userService.getAllUsersOfTeam(id);
+    }
+
     @PostMapping("/addNew")
     public UserDTO addNewUser(@RequestBody UserDetailsWrapper wrapper){
         return userService.addNewUser(wrapper);
@@ -41,7 +49,7 @@ public class UserController {
 
     @PostMapping("/updateAccessMode")
     public void updateAccessMode(@RequestBody UserAccessModeDetailsWrapper wrapper) throws NotFoundException {
-        userService.updateAccessMode(wrapper);
+        userService.updateAccessMode(wrapper, true);
     }
 
     @GetMapping("/user-permissions")
@@ -53,4 +61,21 @@ public class UserController {
     public List<AuditDTO> getAuditLogs(@RequestParam("userId") Long id) throws NotFoundException {
         return userService.getAuditLogs(id);
     }
+
+    @GetMapping("/userDashboard/accessData")
+    public List<UserDashboardAccessDataDTO> getAccessData(@RequestParam("userId") Long id) throws NotFoundException {
+        return userService.getAccessData(id);
+
+    }
+
+    @GetMapping("/userDashboard/auditLog")
+    public List<AuditDTO> getUserAudit(@RequestParam("userId") Long id) throws NotFoundException {
+        return userService.getUserDashboardAudit(id);
+    }
+
+    @PostMapping("/access-request")
+    public void saveAccessRequest(@RequestBody AccessRequestDTO accessRequestDTO) throws NotFoundException {
+        userService.saveAccessRequest(accessRequestDTO);
+    }
+
 }

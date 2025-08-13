@@ -2,6 +2,7 @@ package com.example.accessManager.service.impl;
 
 import com.example.accessManager.dto.AuditDTO;
 import com.example.accessManager.dto.UserAccessControlDTO;
+import com.example.accessManager.entity.AccessRequest;
 import com.example.accessManager.entity.AuditTrail;
 import com.example.accessManager.entity.TeamAccessControl;
 import com.example.accessManager.entity.UserAccessControl;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -48,6 +50,8 @@ public class AuditTrailServiceImpl implements AuditTrailService {
             case TEAM_ACCESS:
                 auditTrail.setTeamAccessControlId(id);
                 break;
+            case ACCESS_REQUEST:
+                auditTrail.setAccessRequestId(id);
             default:
                 break;
         }
@@ -57,7 +61,19 @@ public class AuditTrailServiceImpl implements AuditTrailService {
 
     @Override
     public List<AuditDTO> getAuditLogs(Long id, String type) throws NotFoundException {
-        List<AuditTrail> auditTrailList = type.equals("Team") ? auditTrailRepository.findAllByTeam(id) : auditTrailRepository.findAllByUser(id);
+        List<AuditTrail> auditTrailList = new ArrayList<>();
+        if(type.equals("Team")){
+            auditTrailList.addAll(auditTrailRepository.findAllByTeam(id));
+        } else if(type.equals("User")){
+            auditTrailList.addAll(auditTrailRepository.findAllByUser(id));
+            auditTrailList.addAll(auditTrailRepository.findAllAccessRequestByActionType(id, ActionType.ACCESS_REQUEST_APPROVAL.name()));
+        }else{
+            auditTrailList.addAll(auditTrailRepository.findAllAccessRequestByActionType(id, ActionType.ACCESS_REQUEST_APPROVAL.name()));
+            auditTrailList.addAll(auditTrailRepository.findAllAccessRequestByActionType(id, ActionType.ACCESS_REQUEST.name()));
+        }
+        auditTrailList.sort(
+                Comparator.comparing(AuditTrail::getUpdatedDate).reversed()
+        );
         List<AuditDTO> auditDTOList = new ArrayList<>();
         for(AuditTrail auditTrail: auditTrailList){
             AuditDTO auditDTO = new AuditDTO();
@@ -69,6 +85,8 @@ public class AuditTrailServiceImpl implements AuditTrailService {
                 case ACCESS_MODE_CHANGE:
                 case ADD_USER:
                 case UPDATE_USER:
+                case ACCESS_REQUEST:
+                case ACCESS_REQUEST_APPROVAL:
                     auditDTO.setAuditDescription(auditTrail.getAction());
                     break;
                 case ActionType.TEAM_ACCESS_CHANGE:
