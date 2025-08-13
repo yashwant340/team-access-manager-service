@@ -5,10 +5,11 @@ import com.example.accessManager.entity.*;
 import com.example.accessManager.enums.AccessMode;
 import com.example.accessManager.enums.ActionType;
 import com.example.accessManager.enums.EntityType;
+import com.example.accessManager.enums.PendingRequestStatus;
 import com.example.accessManager.exceptions.NotFoundException;
 import com.example.accessManager.mapper.TeamMapper;
 import com.example.accessManager.mapper.UserMapper;
-import com.example.accessManager.repository.TeamAccessControlRepository;
+import com.example.accessManager.repository.AccessRequestRepository;
 import com.example.accessManager.repository.UserAccessControlRepository;
 import com.example.accessManager.repository.UserRepository;
 import com.example.accessManager.service.AuditTrailService;
@@ -17,12 +18,12 @@ import com.example.accessManager.wrapper.FeatureAccessWrapper;
 import com.example.accessManager.wrapper.UserAccessModeDetailsWrapper;
 import com.example.accessManager.wrapper.UserDetailsWrapper;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.annotations.NotFound;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @Component
 @RequiredArgsConstructor
@@ -32,8 +33,9 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final AuditTrailService auditTrailService;
     private final UserAccessControlRepository userAccessControlRepository;
-    private final TeamAccessControlRepository teamAccessControlRepository;
+    private final AccessRequestRepository accessRequestRepository;
     private final TeamMapper teamMapper;
+    private final DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy");
 
     @Override
     public List<UserDTO> getAllUsers() {
@@ -97,12 +99,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void updateAccessMode(UserAccessModeDetailsWrapper wrapper) throws NotFoundException {
+    public void updateAccessMode(UserAccessModeDetailsWrapper wrapper, boolean isAuditRequired) throws NotFoundException {
         User user = userRepository.findById(wrapper.getUserId())
                 .orElseThrow(() -> new NotFoundException("User not found with ID : {}" + wrapper.getUserId()));
 
-        if(user.getAccessMode().toString().equals(wrapper.getAccessMode())){
-            auditTrailService.addAuditEntry(ActionType.ACCESS_MODE_CHANGE,"Access Mode changed to " + wrapper.getAccessMode(),"",EntityType.USER, wrapper.getUserId());
+        if(!user.getAccessMode().toString().equals(wrapper.getAccessMode()) && isAuditRequired){
+            if(wrapper.getAccessMode().equals("INHERIT_TEAM_ACCESS")){
+                auditTrailService.addAuditEntry(ActionType.ACCESS_MODE_CHANGE, "Access Mode set to \"Inherit Team access\" and all existing access are revoked and inherited from teams access","",EntityType.USER, wrapper.getUserId());
+            }else{
+                auditTrailService.addAuditEntry(ActionType.ACCESS_MODE_CHANGE,"Access Mode changed to \"Override Team access\" " ,"",EntityType.USER, wrapper.getUserId());
+            }
         }
         if(wrapper.getAccessMode().equals("OVERRIDE_TEAM_ACCESS")){
             user.setAccessMode(AccessMode.OVERRIDE_TEAM_ACCESS);
@@ -133,11 +139,14 @@ public class UserServiceImpl implements UserService {
                             .isActive(true)
                             .build();
                     userAccessControlList.add(newControl);
+
                 }
             }
             List<UserAccessControl> userAccessControl = userAccessControlRepository.saveAll(userAccessControlList);
             for(UserAccessControl overrides : userAccessControl){
-                auditTrailService.addAuditEntry(ActionType.USER_ACCESS_CHANGE,overrides.isHasAccess() ? "Access Provisioned" : "Access Revoked","",EntityType.USER_ACCESS, overrides.getId());
+                if(isAuditRequired){
+                    auditTrailService.addAuditEntry(ActionType.USER_ACCESS_CHANGE,overrides.isHasAccess() ? "Access Provisioned" : "Access Revoked","",EntityType.USER_ACCESS, overrides.getId());
+                }
             }
 
         }else{
@@ -147,9 +156,7 @@ public class UserServiceImpl implements UserService {
                 for(UserAccessControl access: userAccessControlList){
                     access.setIsActive(Boolean.FALSE);
                     access.setUpdatedDate(new Date());
-                    auditTrailService.addAuditEntry(ActionType.USER_ACCESS_CHANGE,"Access revoked","",EntityType.USER_ACCESS, access.getId());
                 }
-
                 userAccessControlRepository.saveAll(userAccessControlList);
             }
         }
@@ -169,5 +176,110 @@ public class UserServiceImpl implements UserService {
         UserDTO userDTO = userMapper.userToUserDto(userRepository.save(user));
         auditTrailService.addAuditEntry(ActionType.UPDATE_USER, "User Deleted", "",EntityType.USER,id);
         return userDTO;
+    }
+
+    @Override
+    public List<UserDTO> getAllUsersOfTeam(Long id) {
+        List<User> userList = userRepository.findAllByTeam_Id(id);
+        List<UserDTO> userDTOList = new ArrayList<>();
+        userList.forEach( x -> userDTOList.add(userMapper.userToUserDto(x)));
+        return userDTOList;
+    }
+
+    @Override
+    public List<UserDashboardAccessDataDTO> getAccessData(Long id) throws NotFoundException {
+        List<UserDashboardAccessDataDTO> userDashboardAccessDataDTOS = new ArrayList<>();
+
+        User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found with " + id));
+        List<AccessRequest> accessRequests = accessRequestRepository.findAllByUser_IdAndIsActiveTrue(id);
+
+        if (user.getAccessMode().equals(AccessMode.OVERRIDE_TEAM_ACCESS)) {
+            List<UserAccessControl> userAccessControls = userAccessControlRepository.findAllByUser_IdInAndIsActiveTrue(Collections.singletonList(id));
+            for (UserAccessControl userAccessControl : userAccessControls) {
+                UserDashboardAccessDataDTO userDashboardAccessDataDTO = new UserDashboardAccessDataDTO();
+                userDashboardAccessDataDTO.setId(userAccessControl.getId());
+                userDashboardAccessDataDTO.setUserId(id);
+                userDashboardAccessDataDTO.setFeatureId(userAccessControl.getFeature().getId());
+                userDashboardAccessDataDTO.setFeatureName(userAccessControl.getFeature().getName());
+                userDashboardAccessDataDTO.setHasAccess(userAccessControl.isHasAccess());
+                userDashboardAccessDataDTO.setLastUpdatedDate(dateFormat.format(userAccessControl.getUpdatedDate()));
+                for (AccessRequest accessRequest : accessRequests) {
+                    if (Objects.equals(accessRequest.getUser().getId(), id) && Objects.equals(accessRequest.getFeature().getId(), userAccessControl.getFeature().getId())) {
+                        PendingRequestDTO pendingRequestDTO = new PendingRequestDTO();
+                        pendingRequestDTO.setId(accessRequest.getId());
+                        pendingRequestDTO.setRequestedOn(dateFormat.format(accessRequest.getRequestedOn()));
+                        pendingRequestDTO.setRequestStatus(accessRequest.getRequestStatus().name());
+                        pendingRequestDTO.setRequestType(accessRequest.getRequestType());
+                        userDashboardAccessDataDTO.setPendingRequestDTO(pendingRequestDTO);
+                    }
+                }
+                userDashboardAccessDataDTOS.add(userDashboardAccessDataDTO);
+            }
+        }else{
+            List<TeamAccessControl> teamAccessControls = user.getTeam().getAccessControls();
+            for (TeamAccessControl teamAccessControl : teamAccessControls) {
+                UserDashboardAccessDataDTO userDashboardAccessDataDTO = new UserDashboardAccessDataDTO();
+                userDashboardAccessDataDTO.setId(teamAccessControl.getId());
+                userDashboardAccessDataDTO.setUserId(id);
+                userDashboardAccessDataDTO.setFeatureId(teamAccessControl.getFeature().getId());
+                userDashboardAccessDataDTO.setFeatureName(teamAccessControl.getFeature().getName());
+                userDashboardAccessDataDTO.setHasAccess(teamAccessControl.isHasAccess());
+                userDashboardAccessDataDTO.setLastUpdatedDate(dateFormat.format(teamAccessControl.getUpdatedDate()));
+                for (AccessRequest accessRequest : accessRequests) {
+                    if (Objects.equals(accessRequest.getUser().getId(), id) && accessRequest.getFeature().getId() == teamAccessControl.getFeature().getId()) {
+                        PendingRequestDTO pendingRequestDTO = new PendingRequestDTO();
+                        pendingRequestDTO.setId(accessRequest.getId());
+                        pendingRequestDTO.setRequestedOn(dateFormat.format(accessRequest.getRequestedOn()));
+                        pendingRequestDTO.setRequestStatus(accessRequest.getRequestStatus().name());
+                        pendingRequestDTO.setRequestType(accessRequest.getRequestType());
+                        userDashboardAccessDataDTO.setPendingRequestDTO(pendingRequestDTO);
+                    }
+                }
+                userDashboardAccessDataDTOS.add(userDashboardAccessDataDTO);
+            }
+        }
+        return userDashboardAccessDataDTOS;
+
+    }
+
+    @Override
+    public void saveAccessRequest(AccessRequestDTO accessRequestDTO) throws NotFoundException {
+        UserDashboardAccessDataDTO userDashboardAccessDataDTO = new UserDashboardAccessDataDTO();
+        if(accessRequestDTO.getId() != 0){
+            AccessRequest accessRequest = accessRequestRepository.findByIdAndIsActiveTrue(accessRequestDTO.getId());
+            accessRequest.setRequestStatus(PendingRequestStatus.valueOf(accessRequestDTO.getRequestStatus()));
+            accessRequest.setUpdatedDate(new Date());
+            accessRequest.setIsActive(false);
+            accessRequestRepository.save(accessRequest);
+            String action = getActionString(accessRequestDTO);
+            auditTrailService.addAuditEntry(ActionType.ACCESS_REQUEST,action,"",EntityType.ACCESS_REQUEST, accessRequest.getId());
+        }else{
+            AccessRequest accessRequest = accessRequestRepository.save(userMapper.accessRequestDtoToAccessRequest(accessRequestDTO));
+            auditTrailService.addAuditEntry(ActionType.ACCESS_REQUEST,getActionString(accessRequestDTO),"",EntityType.ACCESS_REQUEST, accessRequest.getId());
+        }
+
+    }
+
+    @Override
+    public UserDTO getUser(Long id) throws NotFoundException {
+        User user = userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found with id " + id));
+        return userMapper.userToUserDto(user);
+    }
+
+    @Override
+    public List<AuditDTO> getUserDashboardAudit(Long id) throws NotFoundException {
+        return auditTrailService.getAuditLogs(id,"UserDashBoard");
+    }
+
+    private static String getActionString(AccessRequestDTO accessRequest) {
+        String action;
+        String type = accessRequest.getRequestType().equals("GRANT") ? " grant " : " revoke ";
+        action = switch (PendingRequestStatus.valueOf(accessRequest.getRequestStatus())) {
+            case PENDING -> "Access" + type + "request raised for " + accessRequest.getFeatureName();
+            case APPROVED -> "Access" + type + "request approved for " + accessRequest.getFeatureName();
+            case REJECTED -> "Access" + type + "request rejected for " + accessRequest.getFeatureName();
+            case CANCELLED -> "Access" + type + "request cancelled by user for " + accessRequest.getFeatureName();
+        };
+        return action;
     }
 }

@@ -1,8 +1,6 @@
 package com.example.accessManager.service;
 
-import com.example.accessManager.dto.AccessControlDTO;
-import com.example.accessManager.dto.AuditDTO;
-import com.example.accessManager.dto.UserDTO;
+import com.example.accessManager.dto.*;
 import com.example.accessManager.exceptions.NotFoundException;
 import com.example.accessManager.wrapper.UserAccessModeDetailsWrapper;
 import com.example.accessManager.wrapper.UserDetailsWrapper;
@@ -20,9 +18,19 @@ public interface UserService {
 
     UserDTO updateUser(UserDetailsWrapper wrapper);
 
-    void updateAccessMode(UserAccessModeDetailsWrapper wrapper) throws NotFoundException;
+    void updateAccessMode(UserAccessModeDetailsWrapper wrapper, boolean isAuditRequired) throws NotFoundException;
 
     List<AuditDTO> getAuditLogs(Long id) throws NotFoundException;
 
     UserDTO deleteUser(Long id) throws NotFoundException;
+
+    List<UserDTO> getAllUsersOfTeam(Long id);
+
+    List<UserDashboardAccessDataDTO> getAccessData(Long id) throws NotFoundException;
+
+    void saveAccessRequest(AccessRequestDTO accessRequestDTO) throws NotFoundException;
+
+    UserDTO getUser(Long id) throws NotFoundException;
+
+    List<AuditDTO> getUserDashboardAudit(Long id) throws NotFoundException;
 }

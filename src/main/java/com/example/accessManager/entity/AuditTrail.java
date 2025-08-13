@@ -39,6 +39,9 @@ public class AuditTrail {
     @Column(name = "user_id")
     private Long userId;
 
+    @Column(name = "access_request_id")
+    private Long accessRequestId;
+
     @Column(name = "actor")
     private String actor;
 
