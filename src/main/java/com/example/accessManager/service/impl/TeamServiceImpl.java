@@ -40,7 +40,6 @@ public class TeamServiceImpl implements TeamService {
     private final AccessRequestRepository accessRequestRepository;
     private final UserMapper userMapper;
     private final LoginRequestRepository loginRequestRepository;
-    private final DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy");
 
     @Override
     public List<TeamDTO> getAllTeams() {
@@ -238,22 +237,5 @@ public class TeamServiceImpl implements TeamService {
         auditTrailService.addAuditEntry(ActionType.ACCESS_REQUEST_APPROVAL,"Access request rejected for feature " + accessRequestDTO.getFeatureName(), "",EntityType.ACCESS_REQUEST, accessRequestDTO.getId());
     }
 
-    @Override
-    public List<LoginRequestDTO> getAllLoginRequests() {
-        List<LoginRequest> loginRequests = loginRequestRepository.findAllByIsActiveTrue();
-        List<LoginRequestDTO> loginRequestDTOS = new ArrayList<>();
-        loginRequests.forEach(x -> {
-            LoginRequestDTO loginRequestDTO = LoginRequestDTO.builder()
-                    .id(x.getId())
-                    .name(x.getName())
-                    .email(x.getEmail())
-                    .empId(x.getEmpId())
-                    .team(x.getTeam())
-                    .role(x.getRole())
-                    .createdDate(dateFormat.format(x.getCreatedDate()))
-                    .build();
-            loginRequestDTOS.add(loginRequestDTO);
-        });
-        return loginRequestDTOS;
-    }
+
 }

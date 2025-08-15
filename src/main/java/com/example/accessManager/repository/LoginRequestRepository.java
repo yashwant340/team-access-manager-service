@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface LoginRequestRepository extends JpaRepository<LoginRequest, Long> {
     List<LoginRequest> findAllByIsActiveTrue();
+
+    LoginRequest findByIdAndIsActiveTrue(Long id);
 }
