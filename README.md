@@ -1,9 +1,5 @@
 
----
 
-## **3. Backend README (team-access-manager-service)**
-
-```markdown
 # Team Access Manager - Backend (Spring Boot)
 
 This is the **Spring Boot backend service** for Team Access Manager.  
