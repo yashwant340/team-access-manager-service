@@ -59,10 +59,6 @@ public class TeamController {
         return teamService.getPendingRequests(userDetails);
     }
 
-    @GetMapping("/pending-login-request")
-    public List<LoginRequestDTO> getLoginRequests(){
-        return teamService.getAllLoginRequests();
-    }
 
     @PostMapping("/request-decision")
     public void saveRequestDecision(@RequestBody AccessRequestDTO accessRequestDTO) throws NotFoundException {

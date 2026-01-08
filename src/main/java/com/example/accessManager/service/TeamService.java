@@ -32,5 +32,4 @@ public interface TeamService {
 
     void saveRequestDecision(AccessRequestDTO accessRequestDTO) throws NotFoundException;
 
-    List<LoginRequestDTO> getAllLoginRequests();
 }
