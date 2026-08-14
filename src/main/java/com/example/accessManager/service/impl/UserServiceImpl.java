@@ -14,6 +14,7 @@ import com.example.accessManager.repository.UserAccessControlRepository;
 import com.example.accessManager.repository.UserRepository;
 import com.example.accessManager.service.AuditTrailService;
 import com.example.accessManager.service.UserService;
+import com.example.accessManager.utils.SecurityUtility;
 import com.example.accessManager.wrapper.FeatureAccessWrapper;
 import com.example.accessManager.wrapper.UserAccessModeDetailsWrapper;
 import com.example.accessManager.wrapper.UserDetailsWrapper;
@@ -36,6 +37,7 @@ public class UserServiceImpl implements UserService {
     private final AccessRequestRepository accessRequestRepository;
     private final TeamMapper teamMapper;
     private final DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy");
+    private final SecurityUtility securityUtility;
 
     @Override
     public List<UserDTO> getAllUsers() {
@@ -69,7 +71,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDTO addNewUser(UserDetailsWrapper wrapper){
         User addedUser = userRepository.save(userMapper.newUserDetailsWrapperToUser(wrapper));
-        auditTrailService.addAuditEntry(ActionType.ADD_USER,"New User Added","",EntityType.USER,addedUser.getId());
+        auditTrailService.addAuditEntry(ActionType.ADD_USER,"New User Added",securityUtility.getCurrentUsername(),EntityType.USER,addedUser.getId());
         return userMapper.userToUserDto(addedUser);
     }
 
@@ -80,17 +82,17 @@ public class UserServiceImpl implements UserService {
         if(user.isPresent()){
             User currUser = user.get();
             if(wrapper.getRole() != null && !wrapper.getRole().trim().equals(currUser.getRole().trim())) {
-                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User role updated from " +user.get().getRole() + " to " + wrapper.getRole(),"",EntityType.USER, wrapper.getId());
+                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User role updated from " +user.get().getRole() + " to " + wrapper.getRole(),securityUtility.getCurrentUsername(),EntityType.USER, wrapper.getId());
                 currUser.setRole(wrapper.getRole());
             }
             if(wrapper.getEmail() != null && !wrapper.getEmail().equals(currUser.getEmail())) {
-                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User email updated from " +user.get().getEmail() + " to " + wrapper.getEmail(),"",EntityType.USER, wrapper.getId());
+                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User email updated from " +user.get().getEmail() + " to " + wrapper.getEmail(),securityUtility.getCurrentUsername(),EntityType.USER, wrapper.getId());
                 currUser.setEmail(wrapper.getEmail());
             }
             if(wrapper.getTeamId() != null && !wrapper.getTeamId().equals(currUser.getTeam().getId())) {
                 String name = currUser.getTeam().getName();
                 currUser.setTeam(Team.builder().id(wrapper.getTeamId()).build());
-                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User team updated from " + name + " to " + wrapper.getTeamName(),"",EntityType.USER, wrapper.getId());
+                auditTrailService.addAuditEntry(ActionType.UPDATE_USER,"User team updated from " + name + " to " + wrapper.getTeamName(),securityUtility.getCurrentUsername(),EntityType.USER, wrapper.getId());
             }
             userDTO = userMapper.userToUserDto(userRepository.save(currUser));
         }
@@ -105,14 +107,14 @@ public class UserServiceImpl implements UserService {
 
         if(!user.getAccessMode().toString().equals(wrapper.getAccessMode()) && isAuditRequired){
             if(wrapper.getAccessMode().equals("INHERIT_TEAM_ACCESS")){
-                auditTrailService.addAuditEntry(ActionType.ACCESS_MODE_CHANGE, "Access Mode set to \"Inherit Team access\" and all existing access are revoked and inherited from teams access","",EntityType.USER, wrapper.getUserId());
+                auditTrailService.addAuditEntry(ActionType.ACCESS_MODE_CHANGE, "Access Mode set to \"Inherit Team access\" and all existing access are revoked and inherited from teams access",securityUtility.getCurrentUsername(),EntityType.USER, wrapper.getUserId());
             }else{
-                auditTrailService.addAuditEntry(ActionType.ACCESS_MODE_CHANGE,"Access Mode changed to \"Override Team access\" " ,"",EntityType.USER, wrapper.getUserId());
+                auditTrailService.addAuditEntry(ActionType.ACCESS_MODE_CHANGE,"Access Mode changed to \"Override Team access\" " ,securityUtility.getCurrentUsername(),EntityType.USER, wrapper.getUserId());
             }
         }
         if(wrapper.getAccessMode().equals("OVERRIDE_TEAM_ACCESS")){
             user.setAccessMode(AccessMode.OVERRIDE_TEAM_ACCESS);
-            List<UserAccessControl> userAccessControlList = new ArrayList<>();
+            List<UserAccessControl> changedAccessControls = new ArrayList<>();
             for(FeatureAccessWrapper overrides: wrapper.getFeatureAccessDetailsWrapper().getFeatureAccessWrapperList()){
                 Long userId = wrapper.getUserId();
                 Long featureId = overrides.getFeatureId();
@@ -122,14 +124,14 @@ public class UserServiceImpl implements UserService {
                         .findByUser_IdAndFeature_Id(userId, featureId);
 
                 if (existing.isPresent()) {
-                    // Update existing entry
                     UserAccessControl control = existing.get();
-                    control.setHasAccess(overrides.isAccess());
-                    control.setUpdatedDate(new Date());
-                    control.setIsActive(true);
-                    userAccessControlList.add(control);
+                    if (control.isHasAccess() != overrides.isAccess() || !Boolean.TRUE.equals(control.getIsActive())) {
+                        control.setHasAccess(overrides.isAccess());
+                        control.setUpdatedDate(new Date());
+                        control.setIsActive(true);
+                        changedAccessControls.add(control);
+                    }
                 } else {
-                    // Insert new entry
                     UserAccessControl newControl = UserAccessControl.builder()
                             .user(User.builder().id(userId).build())
                             .feature(Feature.builder().id(featureId).build())
@@ -138,14 +140,16 @@ public class UserServiceImpl implements UserService {
                             .updatedDate(new Date())
                             .isActive(true)
                             .build();
-                    userAccessControlList.add(newControl);
+                    changedAccessControls.add(newControl);
 
                 }
             }
-            List<UserAccessControl> userAccessControl = userAccessControlRepository.saveAll(userAccessControlList);
-            for(UserAccessControl overrides : userAccessControl){
-                if(isAuditRequired){
-                    auditTrailService.addAuditEntry(ActionType.USER_ACCESS_CHANGE,overrides.isHasAccess() ? "Access Provisioned" : "Access Revoked","",EntityType.USER_ACCESS, overrides.getId());
+            if (!changedAccessControls.isEmpty()) {
+                List<UserAccessControl> savedAccessControls = userAccessControlRepository.saveAll(changedAccessControls);
+                for(UserAccessControl overrides : savedAccessControls){
+                    if(isAuditRequired){
+                        auditTrailService.addAuditEntry(ActionType.USER_ACCESS_CHANGE,overrides.isHasAccess() ? "Access configured as granted" : "Access configured as not granted",securityUtility.getCurrentUsername(),EntityType.USER_ACCESS, overrides.getId());
+                    }
                 }
             }
 
@@ -174,7 +178,7 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id).orElseThrow( () -> new NotFoundException("User not found with " + id));
         user.setIsActive(false);
         UserDTO userDTO = userMapper.userToUserDto(userRepository.save(user));
-        auditTrailService.addAuditEntry(ActionType.UPDATE_USER, "User Deleted", "",EntityType.USER,id);
+        auditTrailService.addAuditEntry(ActionType.UPDATE_USER, "User deactivated", securityUtility.getCurrentUsername(),EntityType.USER,id);
         return userDTO;
     }
 
@@ -244,18 +248,21 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void saveAccessRequest(AccessRequestDTO accessRequestDTO) throws NotFoundException {
-        UserDashboardAccessDataDTO userDashboardAccessDataDTO = new UserDashboardAccessDataDTO();
         if(accessRequestDTO.getId() != 0){
             AccessRequest accessRequest = accessRequestRepository.findByIdAndIsActiveTrue(accessRequestDTO.getId());
-            accessRequest.setRequestStatus(PendingRequestStatus.valueOf(accessRequestDTO.getRequestStatus()));
+            PendingRequestStatus requestStatus = PendingRequestStatus.valueOf(accessRequestDTO.getRequestStatus());
+            accessRequest.setRequestStatus(requestStatus);
             accessRequest.setUpdatedDate(new Date());
             accessRequest.setIsActive(false);
             accessRequestRepository.save(accessRequest);
-            String action = getActionString(accessRequestDTO);
-            auditTrailService.addAuditEntry(ActionType.ACCESS_REQUEST,action,"",EntityType.ACCESS_REQUEST, accessRequest.getId());
+            if (requestStatus == PendingRequestStatus.CANCELLED) {
+                auditTrailService.addAuditEntry(ActionType.ACCESS_REQUEST, getActionString(accessRequestDTO),securityUtility.getCurrentUsername(),EntityType.ACCESS_REQUEST, accessRequest.getId());
+            }
         }else{
             AccessRequest accessRequest = accessRequestRepository.save(userMapper.accessRequestDtoToAccessRequest(accessRequestDTO));
-            auditTrailService.addAuditEntry(ActionType.ACCESS_REQUEST,getActionString(accessRequestDTO),"",EntityType.ACCESS_REQUEST, accessRequest.getId());
+            if (PendingRequestStatus.valueOf(accessRequestDTO.getRequestStatus()) == PendingRequestStatus.PENDING) {
+                auditTrailService.addAuditEntry(ActionType.ACCESS_REQUEST,getActionString(accessRequestDTO),securityUtility.getCurrentUsername(),EntityType.ACCESS_REQUEST, accessRequest.getId());
+            }
         }
 
     }

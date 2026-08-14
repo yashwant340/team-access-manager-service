@@ -38,7 +38,7 @@ public class EmailService {
         }
     }
 
-    public void sendOtpEmail(String to, String otp) throws MessagingException, MessagingException {
+    public void sendOtpEmail(String to, String otp) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
 

@@ -61,7 +61,7 @@ public class TeamController {
 
 
     @PostMapping("/request-decision")
-    public void saveRequestDecision(@RequestBody AccessRequestDTO accessRequestDTO) throws NotFoundException {
-        teamService.saveRequestDecision(accessRequestDTO);
+    public void saveRequestDecision(@RequestBody AccessRequestDTO accessRequestDTO, @AuthenticationPrincipal UserDetails reviewer) throws NotFoundException {
+        teamService.saveRequestDecision(accessRequestDTO, reviewer);
     }
 }

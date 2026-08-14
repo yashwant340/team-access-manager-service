@@ -64,9 +64,10 @@ public class AuditTrailServiceImpl implements AuditTrailService {
         List<AuditTrail> auditTrailList = new ArrayList<>();
         if(type.equals("Team")){
             auditTrailList.addAll(auditTrailRepository.findAllByTeam(id));
-        } else if(type.equals("User")){
+        } else if(type.equals("User") || type.equals("UserDashBoard")){
             auditTrailList.addAll(auditTrailRepository.findAllByUser(id));
             auditTrailList.addAll(auditTrailRepository.findAllAccessRequestByActionType(id, ActionType.ACCESS_REQUEST_APPROVAL.name()));
+            auditTrailList.addAll(auditTrailRepository.findAllAccessRequestByActionType(id, ActionType.ACCESS_REQUEST.name()));
         }else{
             auditTrailList.addAll(auditTrailRepository.findAllAccessRequestByActionType(id, ActionType.ACCESS_REQUEST_APPROVAL.name()));
             auditTrailList.addAll(auditTrailRepository.findAllAccessRequestByActionType(id, ActionType.ACCESS_REQUEST.name()));
@@ -96,6 +97,7 @@ public class AuditTrailServiceImpl implements AuditTrailService {
                 case ActionType.USER_ACCESS_CHANGE:
                     UserAccessControl userAccessControl =userAccessControlRepository.findById(auditTrail.getUserAccessControlId()).orElseThrow(() -> new NotFoundException("User control not found with id : " + auditTrail.getUserAccessControlId()));
                     auditDTO.setAuditDescription(auditTrail.getAction() + " to " + userAccessControl.getFeature().getName());
+                    break;
                 default:
                     break;
             }
