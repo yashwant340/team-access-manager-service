@@ -30,6 +30,6 @@ public interface TeamService {
     List<AccessRequestDTO> getPendingRequests(UserDetails userDetails) throws NotFoundException;
 
 
-    void saveRequestDecision(AccessRequestDTO accessRequestDTO) throws NotFoundException;
+    void saveRequestDecision(AccessRequestDTO accessRequestDTO, UserDetails reviewer) throws NotFoundException;
 
 }

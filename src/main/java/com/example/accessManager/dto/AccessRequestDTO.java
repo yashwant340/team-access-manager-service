@@ -20,6 +20,7 @@ public class AccessRequestDTO {
     private String requestType;
     private String requestStatus;
     private String requestedOn;
+    private Boolean currentFeatureHasAccess;
     private AccessControlDTO otherFeatures;
     private String requestDecision;
 }

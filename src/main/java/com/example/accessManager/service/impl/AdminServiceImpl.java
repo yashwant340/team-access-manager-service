@@ -9,12 +9,16 @@ import com.example.accessManager.entity.LoginRequest;
 import com.example.accessManager.entity.Team;
 import com.example.accessManager.entity.User;
 import com.example.accessManager.enums.AccessMode;
+import com.example.accessManager.enums.ActionType;
+import com.example.accessManager.enums.EntityType;
 import com.example.accessManager.enums.PendingRequestStatus;
 import com.example.accessManager.exceptions.NotFoundException;
 import com.example.accessManager.repository.LoginRequestRepository;
 import com.example.accessManager.repository.UserRepository;
 import com.example.accessManager.service.AdminService;
+import com.example.accessManager.service.AuditTrailService;
 import com.example.accessManager.service.EmailService;
+import com.example.accessManager.utils.SecurityUtility;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -32,6 +36,8 @@ public class AdminServiceImpl implements AdminService {
     private final LoginRequestRepository loginRequestRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final AuditTrailService auditTrailService;
+    private final SecurityUtility securityUtility;
     private final DateFormat dateFormat = new SimpleDateFormat("dd-MMM-yyyy");
     private final SecurityConfig securityConfig;
 
@@ -75,7 +81,14 @@ public class AdminServiceImpl implements AdminService {
         user.setAccessMode(AccessMode.INHERIT_TEAM_ACCESS);
         user.setCreatedDate(new Date());
         user.setPlatformRole("USER");
-        userRepository.save(user);
+        User addedUser = userRepository.save(user);
+        auditTrailService.addAuditEntry(
+                ActionType.ADD_USER,
+                "User account created from an approved login request",
+                securityUtility.getCurrentUsername(),
+                EntityType.USER,
+                addedUser.getId()
+        );
 
         loginRequestRepository.save(loginRequest);
 
