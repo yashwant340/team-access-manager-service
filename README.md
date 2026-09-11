@@ -54,12 +54,3 @@ All endpoints under `/api/auth/**` are public at the HTTP security configuration
 ## Important access rule
 
 An inherited user reads access from `TeamAccessControl`. A custom user reads active `UserAccessControl` rows. When an inherited user's access request is approved, the service copies the team's current matrix into user overrides, applies the requested exception, and changes the user to `OVERRIDE_TEAM_ACCESS`. Switching back to inheritance marks the override rows inactive.
-
-## Production checklist
-
-- Externalize and rotate database, SMTP, and JWT secrets.
-- Use a stable managed JWT key and consider refresh/revocation support.
-- Add method-level role guards, Bean Validation, and centralized error responses.
-- Persist OTP/reset sessions in Redis or a database.
-- Use Flyway or Liquibase migrations and production-safe JPA settings.
-- Add OpenAPI documentation, pagination, observability, rate limiting, and broader automated tests.
