@@ -1,65 +1,65 @@
+# Team Access Manager Service
 
+Spring Boot REST API for the Team Access Manager full-stack application. It implements JWT authentication, role-aware team and user administration, inherited and per-user feature permissions, access/login approval workflows, audit history, email notifications, and OTP-based password recovery.
 
-# Team Access Manager - Backend (Spring Boot)
+The React frontend lives in the sibling `team-access-manager-UI` repository. The full product overview, architecture, data model, setup instructions, and production-hardening notes are documented in its `README.md`; comprehensive interview preparation is in `interview question.md` there.
 
-This is the **Spring Boot backend service** for Team Access Manager.  
-It provides REST APIs for authentication, access management, audit trails, and email notifications.
+## Backend capabilities
 
----
+- Authenticate active users with Spring Security, BCrypt, and one-hour JWTs.
+- Return the authenticated user's identity, role, and team context.
+- Accept account requests and let a platform admin approve them, assign a team, create a user, and email a temporary password.
+- Create/list teams and features; soft-deactivate teams.
+- Create/update/list/soft-deactivate users.
+- Maintain unique team-feature and user-feature permission records.
+- Support `INHERIT_TEAM_ACCESS` and `OVERRIDE_TEAM_ACCESS` modes.
+- Accept, cancel, approve, and reject feature grant/revoke requests.
+- Restrict request review logic to platform admins or the requester's team admin.
+- Preserve audit records for identity, team, permission, mode, and request events.
+- Issue six-digit OTPs with five-minute expiry, a 60-second resend cooldown, five-attempt lockout, and single-use five-minute reset tokens.
+- Send onboarding and password-reset emails through Spring Mail.
 
-## 🔹 Features
-- **JWT Authentication** (login + token refresh)
-- **Role-based Access Control** (Admin/User)
-- **Request Access Flow**
-  - New users submit request
-  - Admin approves
-  - Temporary password sent via email
-- **Forgot Password Flow** (OTP validation + reset)
-- **Audit Trail Logging**
-- **Email Notifications** via Gmail SMTP
+## Architecture
 
----
-
-## 🏗️ Tech Stack
-- Java 24
-- Spring Boot 3.x
-- Spring Security (JWT)
-- Spring Data JPA
-- PostgreSQL
-- Gmail SMTP (JavaMailSender)
-
----
-
-## 🚀 Setup
-1. Clone repo:
-```bash
-   git clone https://github.com/yashwant340/team-access-manager-service.git
-   cd team-access-manager-service
-```
-2. Configure Database
-```bash
-Edit src/main/resources/application.properties:
-
-spring.datasource.url=jdbc:postgresql://localhost:5432/teamaccess
-spring.datasource.username=your_user
-spring.datasource.password=your_password
-```
-3. Configure Email (Gmail Example)
-```bash
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=your-email@gmail.com
-spring.mail.password=your_app_password
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
+```text
+Controller -> Service -> Mapper -> Spring Data Repository -> PostgreSQL
+     |           |
+     |           +-> AuditTrailService / EmailService / OtpService
+     +-> Spring Security JWT filter -> SecurityContext
 ```
 
-⚠️ Use an App Password for Gmail, not your regular password.
+Packages under `src/main/java/com/example/accessManager`:
 
-4. Run Backend
+- `controller`: authentication, admin, team, user, and feature REST endpoints.
+- `service` and `service/impl`: business workflows and infrastructure services.
+- `entity`: JPA domain model.
+- `repository`: Spring Data access methods.
+- `dto` and `wrapper`: response contracts and command payloads.
+- `mapper`: domain/transport conversions.
+- `config` and `utils`: security filter chain, JWT handling, and actor lookup.
+
+## Run locally
+
+Requirements: Java 24, PostgreSQL, and optionally Gmail SMTP credentials.
+
+Configure `src/main/resources/application.properties` without committing real secrets. The current application port is `8081` and the expected database is `team_access_manager`.
+
 ```bash
-mvn clean install
-mvn spring-boot:run
+./mvnw test
+./mvnw spring-boot:run
 ```
 
-Backend runs at: http://localhost:8080
+All endpoints under `/api/auth/**` are public at the HTTP security configuration level; other endpoints require a valid bearer token. Administrative endpoints should additionally receive method-level role authorization before production deployment.
+
+## Important access rule
+
+An inherited user reads access from `TeamAccessControl`. A custom user reads active `UserAccessControl` rows. When an inherited user's access request is approved, the service copies the team's current matrix into user overrides, applies the requested exception, and changes the user to `OVERRIDE_TEAM_ACCESS`. Switching back to inheritance marks the override rows inactive.
+
+## Production checklist
+
+- Externalize and rotate database, SMTP, and JWT secrets.
+- Use a stable managed JWT key and consider refresh/revocation support.
+- Add method-level role guards, Bean Validation, and centralized error responses.
+- Persist OTP/reset sessions in Redis or a database.
+- Use Flyway or Liquibase migrations and production-safe JPA settings.
+- Add OpenAPI documentation, pagination, observability, rate limiting, and broader automated tests.
