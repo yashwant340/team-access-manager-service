@@ -30,9 +30,12 @@ public class TeamMapper {
 
     public TeamDTO teamToTeamDto(Team team){
 
+        // Only active users count as team members; deactivated users stay linked to the team for history
         List<UserDTO> userDTOList = new ArrayList<>();
         if(team.getUsers() != null){
-            team.getUsers().forEach(x -> userDTOList.add(userMapper.userToUserDto(x)));
+            team.getUsers().stream()
+                    .filter(x -> Boolean.TRUE.equals(x.getIsActive()))
+                    .forEach(x -> userDTOList.add(userMapper.userToUserDto(x)));
         }
 
         return TeamDTO.builder()
